@@ -1,31 +1,18 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const path = require('path');
+const app = require("./app");
+const mongoose = require("mongoose");
+require('dotenv').config();
 
-dotenv.config();
+const { MONGO_URI, PORT = 3000 } = process.env;
 
-const authRouter = require('./routes/auth');
-const contactsRouter = require('./routes/contacts'); 
-
-const app = express();
-
-app.use(express.json());
-app.use('/avatars', express.static(path.join(__dirname, 'public/avatars')));
-
-app.use('/auth', authRouter);
-app.use('/api/contacts', contactsRouter); 
-
-const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI;
-
-mongoose.connect(MONGO_URI)
+mongoose
+  .connect(MONGO_URI)
   .then(() => {
-    console.log('Connected to MongoDB');
+    console.log(`Database connection successful at host ${MONGO_URI}`);
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`Server running. Use our API on port: ${PORT}. Press [Ctrl + C] in terminal to stop it.`);
     });
   })
-  .catch(err => {
-    console.error('Failed to connect to MongoDB', err);
+  .catch((err) => {
+    console.error("ERROR ", err);
+    process.exit(1); 
   });

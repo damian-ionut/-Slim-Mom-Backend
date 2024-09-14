@@ -1,38 +1,41 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/user');
+const { JWT_ACCESS_SECRET } = require("../helpers/env");
+const { User } = require("../models");
+const jwt = require("jsonwebtoken");
+const { createError } = require("../helpers/errors");
 
-const authenticate = async (req, res, next) => {
+const authenticateUser = async (token) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      console.log('Authorization header missing');
-      return res.status(401).json({ message: 'Not authorized' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-      console.log('Token missing');
-      return res.status(401).json({ message: 'Not authorized' });
-    }
-
-    console.log('Token received:', token);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Decoded token:', decoded);
-
-    const user = await User.findById(decoded.id);
-    console.log('User found:', user);
-
-    if (!user || user.token !== token) {
-      console.log('User not found or token mismatch');
-      return res.status(401).json({ message: 'Not authorized' });
-    }
-
-    req.user = user;
-    next();
+    const payload = jwt.verify(token, JWT_ACCESS_SECRET);
+    console.log("Token payload:", payload); 
+    return await User.findById(payload._id);
   } catch (error) {
-    console.log('Authorization error:', error);
-    res.status(401).json({ message: 'Not authorized' });
+    console.error("Token verification failed:", error.message); 
+    return null;
   }
 };
 
-module.exports = authenticate;
+const auth = async (req, res, next) => {
+  const { authorization = "" } = req.headers;
+  const [bearer, token] = authorization.split(" ");
+
+  console.log("Authorization header:", authorization);
+  console.log("Bearer part:", bearer); 
+  console.log("Token part:", token); 
+
+  if (bearer !== "Bearer" || !token) {
+    console.error("Authorization header is missing or malformed"); 
+    return next(createError(401, "Not authorized"));
+  }
+
+  const user = await authenticateUser(token);
+
+  if (!user || user.token !== token) {
+    console.error("User not found or token mismatch");
+    return next(createError(401, "Not authorized"));
+  }
+
+  req.user = user;
+  next();
+};
+
+module.exports = auth;
