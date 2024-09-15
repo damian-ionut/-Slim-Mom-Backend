@@ -1,4 +1,3 @@
-
 const express = require("express");
 const { joiValidation, ctrlWrapper, auth } = require("../../middlewares");
 const { joiUserParamsSchema } = require("../../models");

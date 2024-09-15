@@ -1,18 +1,37 @@
-const { createError } = require("../../helpers/errors");
 const { User } = require("../../models");
 
 const logout = async (req, res) => {
-  const { _id } = req.user;
-  
-  console.log("User ID for logout:", _id); 
-
-  if (!_id) {
-    console.error("User ID is missing");
-    throw createError(401, "Not authorized");
+  if (!req.user || !req.user._id) {
+    console.error("User not authenticated");
+    return res.status(401).json({
+      status: "ERROR",
+      code: 401,
+      message: "Not authorized",
+    });
   }
 
+  const { _id } = req.user;
+
   try {
-    await User.findByIdAndUpdate(_id, { token: null });
+    const user = await User.findById(_id);
+
+    if (!user) {
+      console.error("User not found");
+      return res.status(404).json({
+        status: "ERROR",
+        code: 404,
+        message: "User not found",
+      });
+    }
+
+    user.token = null;
+    await user.save();
+
+    console.log(`User with ID: ${_id} successfully logged out`);
+
+    res.clearCookie("token");  
+
+    res.status(204).end();
   } catch (error) {
     console.error("Failed to logout user:", error.message);
     return res.status(500).json({
@@ -22,12 +41,6 @@ const logout = async (req, res) => {
       error: error.message,
     });
   }
-
-  res.status(204).json({
-    status: "No Content",
-    code: 204,
-    message: "Logout was successfully completed",
-  }).end();
-}
+};
 
 module.exports = logout;
